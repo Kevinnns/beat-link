@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ConnectException; // Kevin - Added for requestPlayerDBServerPort & requestDeviceDBServerPortGrouped
+import java.net.InetAddress; // Kevin - Added for requestDeviceDBServerPortGrouped & DeviceAnnouncementListener so we can use the IP
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
@@ -15,7 +17,12 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set; // Kevin - Added for requestDeviceDBServerPortGrouped
+import java.util.TreeSet; // Kevin - Added for requestDeviceDBServerPortGrouped
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors; // Kevin - Added for DeviceAnnouncementListener to allow wait to aggregate Players into a device Object and prevent Race Condition
+import java.util.concurrent.ScheduledExecutorService; // Kevin - Added for DeviceAnnouncementListener to allow wait to aggregate Players into a device Object and prevent Race Condition
+import java.util.concurrent.TimeUnit; // Kevin - Added for DeviceAnnouncementListener helping to define the Time for the wait
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -229,6 +236,16 @@ public class ConnectionManager extends LifecycleParticipant {
     }
 
     /**
+     * Kevin - Define the GroupPlayerPerDevice Class as groupManager so we can use it inside DeviceAnnouncementListener
+     */
+    private final GroupPlayerPerDevice deviceGroupManager = new GroupPlayerPerDevice();
+
+    /**
+     * Kevin - Adding ScheduleExecutorService so we can allow DeviceAnnouncementListener to wait a little bit and see if we see multiple players on an IP before we go and request the DB Port
+     */
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    /**
      * Our announcement listener watches for devices to appear on the network so we can ask them for their database
      * server port, and when they disappear discards all information about them.
      */
@@ -243,17 +260,48 @@ public class ConnectionManager extends LifecycleParticipant {
                 logger.debug("Ignoring departure of Kuvo gateway, which fight each other and come and go constantly, especially in CDJ-3000s.");
                 return;
             }
-            logger.debug("Processing device found, number: {}, name: {}", announcement.getDeviceNumber(), announcement.getDeviceName());
-            new Thread(() -> requestPlayerDBServerPort(announcement)).start();
+            logger.info("Processing device found, number: {}, name: {}, IP: {}", announcement.getDeviceNumber(), announcement.getDeviceName(), announcement.getAddress());
+            //new Thread(() -> requestPlayerDBServerPort(announcement)).start(); // Kevin - Replacing with code to manage grouping
+
+            // Kevin - Derrive the IP, devicenumber and devicename from the announcement request
+            InetAddress ip = announcement.getAddress();
+            int deviceNumber = announcement.getDeviceNumber();
+            String deviceName = announcement.getDeviceName();
+
+            // Kevin - Group devices by IP
+            deviceGroupManager.getOrCreateGroup(ip).addDevice(deviceNumber, deviceName, ip);
+
+            // Kevin - Set Timeout, how long will we give other Players to announce themselves so we can actually group them, if we would do it all directly without waiting we could run into issues as we would get multiple devices trying to group at the same time
+            long gracePeriod = 2000;
+            if (deviceGroupManager.shouldQueryNow(ip, gracePeriod)) {
+                //new Thread(() -> requestDeviceDBServerPortGrouped(ip)).start();
+                ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+                scheduler.schedule(() -> {
+                    requestDeviceDBServerPortGrouped(ip);
+                    scheduler.shutdown(); // Shut it down after the task finishes
+                }, gracePeriod, TimeUnit.MILLISECONDS);
+
+            }
         }
 
         @Override
         public void deviceLost(DeviceAnnouncement announcement) {
-            if (announcement.getDeviceNumber() == 25 && announcement.getDeviceName().equals("NXS-GW")) {
+            InetAddress ip = announcement.getAddress();
+            int playerNumber = announcement.getDeviceNumber();
+            String deviceName = announcement.getDeviceName();
+
+            if (playerNumber == 25 && "NXS-GW".equals(deviceName)) {
                 logger.debug("Ignoring arrival of Kuvo gateway, which fight each other and come and go constantly, especially in CDJ-3000s.");
                 return;
             }
-            dbServerPorts.remove(announcement.getDeviceNumber());
+
+            logger.info("Device lost: number {}, name {}, IP {}", playerNumber, deviceName, ip);
+
+            // Remove from db server port map
+            dbServerPorts.remove(playerNumber);
+
+            // Remove from the device group
+            deviceGroupManager.safelyRemoveDevice(ip, playerNumber, deviceName);
         }
     };
 
@@ -300,6 +348,9 @@ public class ConnectionManager extends LifecycleParticipant {
             Socket socket = null;
             try {
                 InetSocketAddress address = new InetSocketAddress(announcement.getAddress(), DB_SERVER_QUERY_PORT);
+
+                logger.info("Attempting RemoteDBServer request to player {} at IP {}", announcement.getDeviceNumber(), announcement.getAddress()); // Kevin - Adding Logging so we know which device is getting queried
+
                 socket = new Socket();
                 socket.connect(address, socketTimeout.get());
                 InputStream is = socket.getInputStream();
@@ -310,16 +361,16 @@ public class ConnectionManager extends LifecycleParticipant {
                 if (response.length == 2) {
                     final int portReturned = (int)Util.bytesToNumber(response, 0, 2);
                     if (portReturned == 65535) {
-                        logger.info("Player {} reported dbserver port of {}, not yet ready?", announcement.getDeviceNumber(), portReturned);
+                        logger.info("Player {} at IP {} reported dbserver port of {}, not yet ready?", announcement.getDeviceNumber(), announcement.getAddress(), portReturned); // Kevin - Added IP to this for better logging
                     } else {
                         setPlayerDBServerPort(announcement.getDeviceNumber(), portReturned);
                         return;  // Success!
                     }
                 }
             } catch (java.net.ConnectException ce) {
-                logger.info("Player {} doesn't answer rekordbox port queries, connection refused, not yet ready?", announcement.getDeviceNumber());
+                logger.info("Player {} at IP {} doesn't answer rekordbox port queries, connection refused, not yet ready?", announcement.getDeviceNumber(), announcement.getAddress()); // Kevin - Added IP to this for better logging
             } catch (Throwable t) {
-                logger.warn("Problem requesting database server port number", t);
+                logger.warn("Problem requesting database server port number from player {} at IP {}", announcement.getDeviceNumber(), announcement.getAddress(), t); // Kevin - Changed this line to get a better idea on which device we had a failure
             } finally {
                 if (socket != null) {
                     try {
@@ -333,6 +384,76 @@ public class ConnectionManager extends LifecycleParticipant {
 
         logger.info("Player {} never responded with a valid rekordbox dbserver port. Won't attempt to request metadata.",
                 announcement.getDeviceNumber());
+    }
+
+    /**
+     * Kevin - Query a Device (not a specific player) to determine the port on which its database server is running.
+     *
+     * @param ip of the aggregated (if applicable) device object which we detected a new player on the network.
+     */
+    private void requestDeviceDBServerPortGrouped(InetAddress ip) {
+        DeviceGroup group = deviceGroupManager.getOrCreateGroup(ip);
+
+        if (group == null || group.isEmpty()) {
+            logger.warn("Skipping DB port request for IP {}: No device group or players found.", ip);
+            deviceGroupManager.markQueryComplete(ip);
+            return;
+        }
+
+        Set<Integer> players;
+        synchronized (group) {
+            players = new TreeSet<>(group.getPlayerNumbers()); // defensive copy
+        }
+
+        logger.debug("Requesting DB server port for IP {} with players: {}", ip, players);
+
+        try {
+            for (int attempt = 0; attempt < 4; ++attempt) {
+                if (attempt > 0) {
+                    try {
+                        Thread.sleep(1000 * attempt); // Back-off retry
+                    } catch (InterruptedException e) {
+                        logger.warn("Interrupted while retrying DB port request for IP {}", ip);
+                    }
+                }
+
+                try (Socket socket = new Socket()) {
+                    socket.connect(new InetSocketAddress(ip, DB_SERVER_QUERY_PORT), socketTimeout.get());
+                    socket.setSoTimeout(socketTimeout.get());
+
+                    OutputStream os = socket.getOutputStream();
+                    InputStream is = socket.getInputStream();
+
+                    os.write(DB_SERVER_QUERY_PACKET);
+                    byte[] response = readResponseWithExpectedSize(is);
+
+                    if (response.length == 2) {
+                        int port = (int) Util.bytesToNumber(response, 0, 2);
+                        if (port != 65535) {
+                            synchronized (group) {
+                                group.dbPort = port;
+                                for (int playerNumber : group.getPlayerNumbers()) {
+                                    setPlayerDBServerPort(playerNumber, port);
+                                }
+                            }
+
+                            logger.info("Discovered DB server port {} at {} for player(s) {}", port, ip, players);
+                            return;
+                        } else {
+                            logger.info("DB server not ready at {}: port 65535", ip);
+                        }
+                    }
+                } catch (ConnectException ce) {
+                    logger.info("Connection refused when querying DB port at {} (retry {})", ip, attempt + 1);
+                } catch (IOException e) {
+                    logger.warn("IO error while querying DB server port at {}: {}", ip, e.getMessage());
+                }
+            }
+
+            logger.warn("Failed to get a valid DB server port from IP {} after 4 attempts", ip);
+        } finally {
+            deviceGroupManager.markQueryComplete(ip);
+        }
     }
 
     /**
