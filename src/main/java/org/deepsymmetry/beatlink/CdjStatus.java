@@ -683,7 +683,7 @@ public class CdjStatus extends DeviceUpdate {
         handingMasterToDevice = Util.unsign(packetBytes[MASTER_HAND_OFF]);
 
         final byte trackSourceByte = packetBytes[0x28];
-        if (isFromOpusQuad && (trackSourceByte < 16)) {
+        if (isOpusCompatible && (trackSourceByte < 16)) {
             // sourcePlayer variable will be changed to the slot number, it's not the deck number
             int sourcePlayer = Util.translateOpusPlayerNumbers(trackSourceByte);
             int player = Util.translateOpusPlayerNumbers(trackSourceByte);

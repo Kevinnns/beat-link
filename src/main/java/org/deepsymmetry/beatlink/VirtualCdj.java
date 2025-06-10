@@ -1105,7 +1105,7 @@ public class VirtualCdj extends LifecycleParticipant {
             // See if there is an Opus-compatible device on the network, which means we
             // need to be in the limited compatibility mode.
             for (DeviceAnnouncement device : DeviceFinder.getInstance().getCurrentDevices()) {
-                if (device.isOpusQuad) {
+                if (device.isOpusCompatible) {
                     proxyingForVirtualRekordbox.set(true);
                     VirtualRekordbox.getInstance().addLifecycleListener(virtualRekordboxLifecycleListener);
                     final boolean success = VirtualRekordbox.getInstance().start();
