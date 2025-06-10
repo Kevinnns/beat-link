@@ -551,7 +551,20 @@ public class MetadataFinder extends LifecycleParticipant {
             }
         }
         if (OpusProvider.getInstance().isRunning()) {
-            OpusProvider.getInstance().pollAndSendMediaDetails(slot.player);
+            int opusSlot = -1;
+            switch (slot.slot) {
+                case SD_SLOT:
+                    opusSlot = 1;
+                    break;
+                case USB_SLOT:
+                    opusSlot = 2;
+                    break;
+                default:
+                    break;
+            }
+            if (opusSlot != -1) {
+                OpusProvider.getInstance().pollAndSendMediaDetails(opusSlot);
+            }
         }
     }
 
