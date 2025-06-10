@@ -56,7 +56,7 @@ public class DeviceAnnouncement {
         System.arraycopy(packet.getData(), 0, packetBytes, 0, packet.getLength());
         timestamp = System.currentTimeMillis();
         name = new String(packetBytes, 0x0c, 20).trim();
-        isOpusQuad = OpusProvider.isOpusCompatibleDevice(name);
+        isOpusCompatible = OpusProvider.isOpusCompatibleDevice(name);
         number = Util.unsign(packetBytes[0x24]);
     }
 
@@ -77,7 +77,7 @@ public class DeviceAnnouncement {
         System.arraycopy(packet.getData(), 0, packetBytes, 0, packet.getLength());
         timestamp = System.currentTimeMillis();
         name = new String(packetBytes, 0x0c, 20).trim();
-        isOpusQuad = OpusProvider.isOpusCompatibleDevice(name);
+        isOpusCompatible = OpusProvider.isOpusCompatibleDevice(name);
         number = deviceNumber;
     }
 
@@ -182,12 +182,12 @@ public class DeviceAnnouncement {
     }
 
     /**
-     * Check whether a device update came from hardware that behaves like the Opus Quad,
+     * Check whether this announcement came from hardware that behaves like the Opus Quad,
      * which includes the XDJ-AZ in four deck mode. These devices behave very
      * differently from true Pro DJ Link hardware.
      */
     @API(status = API.Status.EXPERIMENTAL)
-    public final boolean isOpusQuad;
+    public final boolean isOpusCompatible;
 
     @Override
     public String toString() {

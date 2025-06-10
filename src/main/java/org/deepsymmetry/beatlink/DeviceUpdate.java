@@ -66,10 +66,10 @@ public abstract class DeviceUpdate {
         packetBytes = new byte[packet.getLength()];
         System.arraycopy(packet.getData(), 0, packetBytes, 0, packet.getLength());
         deviceName = new String(packetBytes, 0x0b, 20).trim();
-        isFromOpusQuad = OpusProvider.isOpusCompatibleDevice(deviceName);
+        isOpusCompatible = OpusProvider.isOpusCompatibleDevice(deviceName);
         preNexusCdj = deviceName.startsWith("CDJ") && (deviceName.endsWith("900") || deviceName.endsWith("2000"));
 
-        if (isFromOpusQuad) {
+        if (isOpusCompatible) {
             deviceNumber = Util.translateOpusPlayerNumbers(packetBytes[DEVICE_NUMBER_OFFSET]);
         } else {
             deviceNumber = Util.unsign(packetBytes[DEVICE_NUMBER_OFFSET]);
@@ -130,11 +130,11 @@ public abstract class DeviceUpdate {
     }
 
     /**
-     * Indicates whether this device update came from hardware that behaves like the Opus Quad,
-     * including the XDJ-AZ operating in four deck mode.
+     * Indicates whether this device update came from hardware that is Opus compatible,
+     * such as the Opus Quad or the XDJ-AZ operating in four deck mode.
      */
     @API(status = API.Status.EXPERIMENTAL)
-    public final boolean isFromOpusQuad;
+    public final boolean isOpusCompatible;
 
     /**
      * Get the raw data bytes of the device update packet.
