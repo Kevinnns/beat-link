@@ -311,6 +311,21 @@ public class VirtualRekordbox extends LifecycleParticipant {
     private final Map<Integer, Integer> previousRawRekordboxIds = new ConcurrentHashMap<>();
 
     /**
+     * Look up which player most recently reported the specified raw rekordbox ID.
+     *
+     * @param rekordboxId the raw rekordbox ID from a PSSI message
+     * @return the player number that last reported this ID, or 0 if no match is found
+     */
+    private int findPlayerForRekordboxId(int rekordboxId) {
+        for (Map.Entry<Integer, Integer> entry : previousRawRekordboxIds.entrySet()) {
+            if (entry.getValue() == rekordboxId) {
+                return entry.getKey();
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Tracks packets received from devices to reconstruct complete messages that span multiple packets.
      * Used primarily for reconstructing binary data (specifically PSSI) from the Opus Quad, which 
      * arrives fragmented across multiple packets. Maintains state between packet
@@ -475,8 +490,15 @@ public class VirtualRekordbox extends LifecycleParticipant {
                 byte[] data = packet.getData();
                 final int packetLength = packet.getLength();
                 final byte[] binaryData = Arrays.copyOfRange(data, 0x34, packetLength);
-                final int playerNumber = Util.translateOpusPlayerNumbers(data[0x21]);
                 final int rekordboxIdFromOpus = (int) Util.bytesToNumber(data, 0x28, 4);
+
+                // Try to find which player this metadata corresponds to by matching the
+                // rekordbox ID sent from the Opus to the last ID we saw from each player.
+                int playerNumber = findPlayerForRekordboxId(rekordboxIdFromOpus);
+                if (playerNumber == 0) {
+                    // Fall back to the player number in the packet if we do not have a match.
+                    playerNumber = Util.translateOpusPlayerNumbers(data[0x21]);
+                }
 
                 // Get or create tracker for this player
                 PacketTracker tracker = playerPacketTrackers.computeIfAbsent(playerNumber, k -> new PacketTracker());
