@@ -11,11 +11,6 @@ import java.util.Objects;
  * Uniquely identifies a media slot on the network from which tracks can be loaded, by the player and slot type.
  * A simple immutable value class, with the property that all instances are interned, such that any instances with
  * the same value will actually be the same object, for fast comparison.
- * <p>
- * When communicating with an Opus-compatible device such as the Opus&nbsp;Quad,
- * the {@code player} value actually represents the USB slot number rather than
- * a deck number.
- * </p>
  *
  * @author James Elliott
  */
@@ -23,8 +18,7 @@ import java.util.Objects;
 public class SlotReference {
 
     /**
-     * The player in which this slot is found. When interacting with
-     * Opus-compatible devices, this represents the USB slot number.
+     * The player in which this slot is found.
      */
     @API(status = API.Status.STABLE)
     public final int player;
@@ -43,8 +37,7 @@ public class SlotReference {
     /**
      * Create a unique reference to a media slot on the network from which tracks can be loaded.
      *
-     * @param player the player in which the slot is found. For Opus-compatible
-     *               devices this is the USB slot number.
+     * @param player the player in which the slot is found
      * @param slot the specific type of the slot
      *
      * @throws NullPointerException if {@code slot} is {@code null}
@@ -64,8 +57,7 @@ public class SlotReference {
     /**
      * Get a unique reference to a media slot on the network from which tracks can be loaded.
      *
-     * @param player the player in which the slot is found. For Opus-compatible
-     *               devices this is the USB slot number.
+     * @param player the player in which the slot is found
      * @param slot the specific type of the slot
      *
      * @return the instance that will always represent the specified slot
