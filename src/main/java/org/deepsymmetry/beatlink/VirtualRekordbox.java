@@ -271,14 +271,7 @@ public class VirtualRekordbox extends LifecycleParticipant {
      */
     @API(status = API.Status.EXPERIMENTAL)
     public void clearPlayerCaches(int usbSlotNumber){
-        // Remove any player mappings whose source slot belongs to the specified USB slot
-        for (Iterator<Map.Entry<Integer, SlotReference>> it = playerTrackSourceSlots.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<Integer, SlotReference> entry = it.next();
-            if (entry.getValue().player == usbSlotNumber) {
-                it.remove();
-                playerToDeviceSqlRekordboxId.remove(entry.getKey());
-            }
-        }
+        playerTrackSourceSlots.remove(usbSlotNumber);
     }
 
     /**
