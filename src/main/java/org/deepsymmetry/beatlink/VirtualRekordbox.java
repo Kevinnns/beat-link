@@ -311,6 +311,14 @@ public class VirtualRekordbox extends LifecycleParticipant {
     private final Map<Integer, Integer> previousRawRekordboxIds = new ConcurrentHashMap<>();
 
     /**
+     * When requesting PSSI data we cannot always rely on the device number contained
+     * in the response packet (the XDJ-AZ always reports player 1).  We therefore
+     * keep track of the order in which players requested PSSI data so we can
+     * associate the responses with the correct player.
+     */
+    private final Deque<Integer> pendingPssiPlayers = new ConcurrentLinkedDeque<>();
+
+    /**
      * Tracks packets received from devices to reconstruct complete messages that span multiple packets.
      * Used primarily for reconstructing binary data (specifically PSSI) from the Opus Quad, which 
      * arrives fragmented across multiple packets. Maintains state between packet
@@ -449,6 +457,7 @@ public class VirtualRekordbox extends LifecycleParticipant {
                         
                         // Only request PSSI if the deck is loaded
                         if (rawRekordboxId != 0) {
+                            pendingPssiPlayers.add(deviceNumber);
                             try {
                                 requestPSSI();
                             } catch (IOException e) {
@@ -475,7 +484,13 @@ public class VirtualRekordbox extends LifecycleParticipant {
                 byte[] data = packet.getData();
                 final int packetLength = packet.getLength();
                 final byte[] binaryData = Arrays.copyOfRange(data, 0x34, packetLength);
-                final int playerNumber = Util.translateOpusPlayerNumbers(data[0x21]);
+                int playerNumber = Util.translateOpusPlayerNumbers(data[0x21]);
+                if (playerNumber <= 4) {
+                    Integer queued = pendingPssiPlayers.poll();
+                    if (queued != null) {
+                        playerNumber = queued;
+                    }
+                }
                 final int rekordboxIdFromOpus = (int) Util.bytesToNumber(data, 0x28, 4);
 
                 // Get or create tracker for this player
