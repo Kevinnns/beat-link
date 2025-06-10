@@ -1063,10 +1063,12 @@ public class Util {
     }
 
     /**
-     * Adjust the player numbers from the Opus-Quad so that they are 1-4 as expected by users and the rest of the
-     * ecosystem.
+     * Normalize the player numbers reported by Opus-compatible devices so they align with the expected
+     * 1-4 range used by the rest of the ecosystem. The Opus Quad reports decks 9-12, which we map back to
+     * 1-4, while devices such as the XDJ-AZ already use standard player numbers and therefore require no
+     * adjustment.
      *
-     * @param reportedPlayerNumber the device number actually reported by the Opus Quad in the range 9-12
+     * @param reportedPlayerNumber the device number reported by an Opus-compatible device
      * @return the logical value in the range 1-4 corresponding to the deck label
      */
     @API(status = API.Status.EXPERIMENTAL)
