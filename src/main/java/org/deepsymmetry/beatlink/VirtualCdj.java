@@ -1623,9 +1623,7 @@ public class VirtualCdj extends LifecycleParticipant {
      * Ask a device for information about the media mounted in a particular slot. Will update the
      * {@link MetadataFinder} when a response is received.
      *
-     * @param slot the slot holding media we want to know about. When querying an
-     *             Opus-compatible device, the {@code player} value represents
-     *             the USB slot number on that device.
+     * @param slot the slot holding media we want to know about.
      *
      * @throws IOException if there is a problem sending the request.
      */
@@ -1857,56 +1855,50 @@ public class VirtualCdj extends LifecycleParticipant {
     };
 
     /**
-     * Send a packet to the target player telling it to load the specified track from the specified source slot.
+     * Send a packet to the target player telling it to load the specified track from the specified source player.
      *
      * @param targetPlayer the device number of the player that you want to have load a track
      * @param rekordboxId the identifier of a track within the source player's rekordbox database
-     * @param sourceUsbSlot the USB slot number of the device from which the track should be loaded
+     * @param sourcePlayer the device number of the player from which the track should be loaded
      * @param sourceSlot the media slot from which the track should be loaded
      * @param sourceType the type of track to be loaded
-     *
-     * When using an Opus-compatible device, {@code sourceUsbSlot} is the USB
-     * slot number rather than a player number.
      *
      * @throws IOException if there is a problem sending the command
      * @throws IllegalStateException if the {@code VirtualCdj} is not active or the target device cannot be found
      */
     @API(status = API.Status.STABLE)
     public void sendLoadTrackCommand(int targetPlayer, int rekordboxId,
-                                     int sourceUsbSlot, CdjStatus.TrackSourceSlot sourceSlot, CdjStatus.TrackType sourceType)
+                                     int sourcePlayer, CdjStatus.TrackSourceSlot sourceSlot, CdjStatus.TrackType sourceType)
             throws IOException {
         final DeviceUpdate update = getLatestStatusFor(targetPlayer);
         if (update == null) {
             throw new IllegalArgumentException("Device " + targetPlayer + " not found on network.");
         }
-        sendLoadTrackCommand(update, rekordboxId, sourceUsbSlot, sourceSlot, sourceType);
+        sendLoadTrackCommand(update, rekordboxId, sourcePlayer, sourceSlot, sourceType);
     }
 
     /**
-     * Send a packet to the target device telling it to load the specified track from the specified source slot.
+     * Send a packet to the target device telling it to load the specified track from the specified source player.
      *
      * @param target an update from the player that you want to have load a track
      * @param rekordboxId the identifier of a track within the source player's rekordbox database
-     * @param sourceUsbSlot the USB slot number of the device from which the track should be loaded
+     * @param sourcePlayer the device number of the player from which the track should be loaded
      * @param sourceSlot the media slot from which the track should be loaded
      * @param sourceType the type of track to be loaded
-     *
-     * When using an Opus-compatible device, {@code sourceUsbSlot} is the USB
-     * slot number rather than a player number.
      *
      * @throws IOException if there is a problem sending the command
      * @throws IllegalStateException if the {@code VirtualCdj} is not active
      */
     @API(status = API.Status.STABLE)
     public void sendLoadTrackCommand(DeviceUpdate target, int rekordboxId,
-                                     int sourceUsbSlot, CdjStatus.TrackSourceSlot sourceSlot, CdjStatus.TrackType sourceType)
+                                     int sourcePlayer, CdjStatus.TrackSourceSlot sourceSlot, CdjStatus.TrackType sourceType)
             throws IOException {
         ensureRunning();
         byte[] payload = new byte[LOAD_TRACK_PAYLOAD.length];
         System.arraycopy(LOAD_TRACK_PAYLOAD, 0, payload, 0, LOAD_TRACK_PAYLOAD.length);
         payload[0x02] = getDeviceNumber();
         payload[0x05] = getDeviceNumber();
-        payload[0x09] = (byte)sourceUsbSlot;
+        payload[0x09] = (byte)sourcePlayer;
         payload[0x0a] = sourceSlot.protocolValue;
         payload[0x0b] = sourceType.protocolValue;
         payload[0x21] = (byte)(target.getDeviceNumber() - 1);

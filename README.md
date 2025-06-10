@@ -264,8 +264,6 @@ In addition to learning about what is happening on other players, the
 tell them to load a track from any media currently mounted in a player
 by calling
 [`sendLoadTrackCommand()`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html#sendLoadTrackCommand-int-int-int-org.deepsymmetry.beatlink.CdjStatus.TrackSourceSlot-org.deepsymmetry.beatlink.CdjStatus.TrackType-).
-When working with an Opus-compatible device, the third argument to this
-method is the USB slot number to load from rather than a player number.
 You can cause them to start playing (if they are currently at the cue
 position), or stop playing and return to the cue position, by calling
 [`sendFaderStartCommand()`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html#sendFaderStartCommand-java.util.Set-java.util.Set-).
@@ -283,8 +281,6 @@ quickly be overridden by the next one sent by the DJM.)
 You can ask the `VirtualCdj` to find out details about the media
 mounted in a player's media slot by calling
 [`sendMediaQuery()`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/VirtualCdj.html#sendMediaQuery-org.deepsymmetry.beatlink.data.SlotReference-).
-When talking to Opus-compatible devices, the `player` value of a
-`SlotReference` actually represents the USB slot number on that device.
 In order to receive the response, you have to previously have
 registered a
 [`MediaDetailsListener`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/MediaDetailsListener.html)
@@ -443,8 +439,6 @@ about any mounted media database by calling
 [`getMountedMediaDetails()`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/data/MetadataFinder.html#getMountedMediaDetails--)
 or
 [`getMediaDetailsFor()`](https://deepsymmetry.org/beatlink/apidocs/org/deepsymmetry/beatlink/data/MetadataFinder.html#getMediaDetailsFor-org.deepsymmetry.beatlink.data.SlotReference-).
-Remember that on Opus-compatible devices the `player` field of a
-`SlotReference` is the USB slot number.
 
 ### Loading Menus
 
