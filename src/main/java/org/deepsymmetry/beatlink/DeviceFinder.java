@@ -193,9 +193,10 @@ public class DeviceFinder extends LifecycleParticipant {
     }
 
     /**
-     * Handle a device announcement packet we have received from the Opus Quad.
+     * Handle a device announcement packet we have received from hardware that behaves
+     * like the Opus Quad (including the XDJ-AZ operating in 4 deck mode).
      *
-     * @param packet the packet from Opus Quad to infer the 4 players
+     * @param packet the packet from which to infer the four players
      */
     private void createAndProcessOpusAnnouncements(DatagramPacket packet) {
         for (int i = 1; i <= 4; i++) {

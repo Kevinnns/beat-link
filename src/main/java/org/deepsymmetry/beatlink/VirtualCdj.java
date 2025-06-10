@@ -52,16 +52,16 @@ public class VirtualCdj extends LifecycleParticipant {
     private final AtomicReference<DatagramSocket> socket = new AtomicReference<>();
 
     /**
-     * Indicates we started {@link VirtualRekordbox} running, so we are just acting as a proxy for it, to
-     * work with the Opus Quad.
+     * Indicates we started {@link VirtualRekordbox} running, so we are just acting as a proxy for it,
+     * to work with Opus-compatible hardware such as the Opus Quad or the XDJ-AZ.
      */
     private final AtomicBoolean proxyingForVirtualRekordbox = new AtomicBoolean(false);
 
     /**
-     * Check whether we are simply proxying information from {@link VirtualRekordbox} so that we can work with the Opus
-     * Quad rather than real Pro DJ Link hardware.
+     * Check whether we are simply proxying information from {@link VirtualRekordbox} so that we can work with
+     * Opus-compatible devices rather than real Pro DJ Link hardware.
      *
-     * @return an indication that we are in a limited mode to support the Opus Quad.
+     * @return an indication that we are in a limited mode to support Opus-compatible hardware.
      */
     @API(status = API.Status.EXPERIMENTAL)
     public boolean inOpusQuadCompatibilityMode() {
@@ -503,7 +503,7 @@ public class VirtualCdj extends LifecycleParticipant {
      * role from or to another device.</p>
      *
      * <p>This used to be a private method, but it was made package accessible as part of the effort to support
-     * Opus Quad hardware, so {@link VirtualRekordbox} could proxy the status packets it receives through us.</p>
+     * Opus-compatible hardware, so {@link VirtualRekordbox} could proxy the status packets it receives through us.</p>
      */
     void processUpdate(DeviceUpdate update) {
         updates.put(DeviceReference.getDeviceReference(update), update);
@@ -1068,8 +1068,8 @@ public class VirtualCdj extends LifecycleParticipant {
 
     /**
      * <p>In normal operation (with Pro DJ Link devices), start announcing ourselves and listening for status packets.
-     * If, however, we find an Opus Quad on the network, start {@link VirtualRekordbox} and operate in a more
-     * limited Opus Quad compatibility mode, acting as a proxy for packets that it is responsible for receiving.
+     * If, however, we find an Opus-compatible device on the network, start {@link VirtualRekordbox} and operate in a
+     * limited compatibility mode, acting as a proxy for packets that it is responsible for receiving.
      * Either mode requires the {@link DeviceFinder} to be active in order to find out how to communicate with
      * other devices, so will start that if it is not already.</p>
      *
@@ -1102,7 +1102,8 @@ public class VirtualCdj extends LifecycleParticipant {
                 return false;
             }
 
-            // See if there is an Opus Quad on the network, which means we need to be in the limited compatibility mode.
+            // See if there is an Opus-compatible device on the network, which means we
+            // need to be in the limited compatibility mode.
             for (DeviceAnnouncement device : DeviceFinder.getInstance().getCurrentDevices()) {
                 if (device.isOpusQuad) {
                     proxyingForVirtualRekordbox.set(true);
@@ -2169,7 +2170,7 @@ public class VirtualCdj extends LifecycleParticipant {
         if (send) {  // Start sending status packets.
             ensureRunning();
             if (proxyingForVirtualRekordbox.get()) {
-                throw new IllegalStateException("Cannot send status when in Opus Quad compatibility mode.");
+                throw new IllegalStateException("Cannot send status when in Opus compatibility mode.");
             }
             if ((getDeviceNumber() < 1) || (getDeviceNumber() > 4)) {
                 throw new IllegalStateException("Can only send status when using a standard player number, 1 through 4.");

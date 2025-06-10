@@ -49,6 +49,23 @@ public class OpusProvider {
     public static final String OPUS_NAME = "OPUS-QUAD";
 
     /**
+     * The device name reported by the XDJ-AZ when it is operating in 4 deck mode.
+     */
+    public static final String XDJ_AZ_NAME = "XDJ-AZ";
+
+    /**
+     * Check whether a device name corresponds to hardware that behaves like the
+     * Opus Quad and therefore requires Rekordbox lighting compatibility mode.
+     *
+     * @param deviceName the name reported by the hardware
+     * @return {@code true} if this is an Opus compatible device
+     */
+    @API(status = API.Status.EXPERIMENTAL)
+    public static boolean isOpusCompatibleDevice(String deviceName) {
+        return OPUS_NAME.equals(deviceName) || XDJ_AZ_NAME.equals(deviceName);
+    }
+
+    /**
      * Keep track of whether we are running.
      */
     private static final AtomicBoolean running = new AtomicBoolean(false);

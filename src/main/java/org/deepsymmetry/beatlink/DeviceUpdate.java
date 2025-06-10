@@ -66,7 +66,7 @@ public abstract class DeviceUpdate {
         packetBytes = new byte[packet.getLength()];
         System.arraycopy(packet.getData(), 0, packetBytes, 0, packet.getLength());
         deviceName = new String(packetBytes, 0x0b, 20).trim();
-        isFromOpusQuad = deviceName.equals(OpusProvider.OPUS_NAME);
+        isFromOpusQuad = OpusProvider.isOpusCompatibleDevice(deviceName);
         preNexusCdj = deviceName.startsWith("CDJ") && (deviceName.endsWith("900") || deviceName.endsWith("2000"));
 
         if (isFromOpusQuad) {
@@ -130,7 +130,8 @@ public abstract class DeviceUpdate {
     }
 
     /**
-     * Indicates whether this device update came from an Opus Quad, which behaves very differently from true Pro DJ Link hardware.
+     * Indicates whether this device update came from hardware that behaves like the Opus Quad,
+     * including the XDJ-AZ operating in four deck mode.
      */
     @API(status = API.Status.EXPERIMENTAL)
     public final boolean isFromOpusQuad;
