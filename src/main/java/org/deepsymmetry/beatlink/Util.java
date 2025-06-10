@@ -1073,7 +1073,10 @@ public class Util {
      */
     @API(status = API.Status.EXPERIMENTAL)
     public static int translateOpusPlayerNumbers(int reportedPlayerNumber) {
-        return reportedPlayerNumber & 7;
+        if (reportedPlayerNumber >= 9 && reportedPlayerNumber <= 12) {
+            return reportedPlayerNumber - 8;
+        }
+        return reportedPlayerNumber;
     }
 
 
