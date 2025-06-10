@@ -684,18 +684,18 @@ public class CdjStatus extends DeviceUpdate {
 
         final byte trackSourceByte = packetBytes[0x28];
         if (isOpusCompatible && (trackSourceByte < 16)) {
-            // sourcePlayer variable will be changed to the slot number, it's not the deck number
-            int sourcePlayer = Util.translateOpusPlayerNumbers(trackSourceByte);
+            // translate the track source byte into the USB slot number, not a deck number
+            int usbSlotNumber = Util.translateOpusPlayerNumbers(trackSourceByte);
             int player = Util.translateOpusPlayerNumbers(trackSourceByte);
-            if (sourcePlayer != 0) {
+            if (usbSlotNumber != 0) {
                 final SlotReference matchedSourceSlot = VirtualRekordbox.getInstance().findMatchedTrackSourceSlotForPlayer(deviceNumber);
                 if (matchedSourceSlot != null) {
-                    sourcePlayer = matchedSourceSlot.player;
+                    usbSlotNumber = matchedSourceSlot.player;
                 }
                 final int deviceSqlRekordboxId = VirtualRekordbox.getInstance().findDeviceSqlRekordboxIdForPlayer(player);
                 maybeRekordboxId = deviceSqlRekordboxId;
             }
-            trackSourcePlayer = sourcePlayer;
+            trackSourcePlayer = usbSlotNumber;
             trackSourceSlot = TrackSourceSlot.USB_SLOT;
             // Indicate whether we have a metadata archive available for the USB slot:
             packetBytes[LOCAL_USB_STATE] = (byte) (OpusProvider.getInstance().findArchive(deviceNumber) == null? 4 : 0);
