@@ -263,7 +263,7 @@ public class OpusProvider {
         final RekordboxUsbArchive formerArchive = usbArchiveMap.remove(usbSlotNumber);
 
         // Report archive closed.
-        final SlotReference emptySlotReference = SlotReference.getSlotReference(usbSlotNumber, null);
+        final SlotReference emptySlotReference = SlotReference.getSlotReference(usbSlotNumber, CdjStatus.TrackSourceSlot.NO_TRACK);
         final MediaDetails emptyDetails = new MediaDetails(emptySlotReference, CdjStatus.TrackType.REKORDBOX, "",
                 0, 0, 0);
 

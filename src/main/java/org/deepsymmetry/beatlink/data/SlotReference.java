@@ -43,6 +43,7 @@ public class SlotReference {
      * @throws NullPointerException if {@code slot} is {@code null}
      */
     private SlotReference(int player, CdjStatus.TrackSourceSlot slot) {
+        Objects.requireNonNull(slot, "slot");
         this.player = player;
         this.slot = slot;
         hashcode = Objects.hash(player, slot);
@@ -65,6 +66,7 @@ public class SlotReference {
      */
     @API(status = API.Status.STABLE)
     public static synchronized SlotReference getSlotReference(int player, CdjStatus.TrackSourceSlot slot) {
+        Objects.requireNonNull(slot, "slot");
         Map<CdjStatus.TrackSourceSlot, SlotReference> playerMap = instances.computeIfAbsent(player, k -> new HashMap<>());
         return playerMap.computeIfAbsent(slot, s -> new SlotReference(player, s));
     }
