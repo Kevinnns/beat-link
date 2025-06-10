@@ -686,13 +686,12 @@ public class CdjStatus extends DeviceUpdate {
         if (isOpusCompatible && (trackSourceByte < 16)) {
             // sourcePlayer variable will be changed to the slot number, it's not the deck number
             int sourcePlayer = Util.translateOpusPlayerNumbers(trackSourceByte);
-            int player = Util.translateOpusPlayerNumbers(trackSourceByte);
             if (sourcePlayer != 0) {
                 final SlotReference matchedSourceSlot = VirtualRekordbox.getInstance().findMatchedTrackSourceSlotForPlayer(deviceNumber);
                 if (matchedSourceSlot != null) {
                     sourcePlayer = matchedSourceSlot.player;
                 }
-                final int deviceSqlRekordboxId = VirtualRekordbox.getInstance().findDeviceSqlRekordboxIdForPlayer(player);
+                final int deviceSqlRekordboxId = VirtualRekordbox.getInstance().findDeviceSqlRekordboxIdForPlayer(deviceNumber);
                 maybeRekordboxId = deviceSqlRekordboxId;
             }
             trackSourcePlayer = sourcePlayer;
