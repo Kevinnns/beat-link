@@ -88,7 +88,10 @@ releases of hardware or even firmware updates from Pioneer.
 > and nxs2 gear, and release 7.3.0 supports CDJ-3000 features. It
 > works fairly well (with less information available) with older
 > CDJ-2000s. It has also been reported to work with XDJ-1000 gear, and
-> (starting with version 0.6.0) with the XDJ-XZ as well. If you can
+> (starting with version 0.6.0) with the XDJ-XZ as well. Beat Link now
+> detects when an XDJ-XZ or XDJ-AZ switches between two- and four-deck
+> modes by watching its peer count, logging the change so applications
+> can respond. If you can
 > try it with anything else, *please* let us know what you learn in
 > [Beat Link Trigger's Zulip chat
 > stream](https://deep-symmetry.zulipchat.com/#narrow/stream/275322-beat-link-trigger),
