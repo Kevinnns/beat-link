@@ -11,6 +11,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.deepsymmetry.beatlink.PlayerModeListener;
+import org.deepsymmetry.beatlink.PlayerModeUpdate;
 
 /**
  * Watches for devices to report their presence by broadcasting announcement packets on port 50000,
@@ -97,6 +99,12 @@ public class DeviceFinder extends LifecycleParticipant {
      * Keep track of the announcements we have seen.
      */
     private final Map<DeviceReference, DeviceAnnouncement> devices = new ConcurrentHashMap<>();
+
+    /**
+     * Track whether each device appears to be in four-deck mode based on the
+     * peer count reported in its most recent announcement.
+     */
+    private final Map<DeviceReference, Boolean> fourDeck = new ConcurrentHashMap<>();
 
     /**
      * Remove any device announcements that are so old that the device seems to have gone away.
@@ -187,6 +195,22 @@ public class DeviceFinder extends LifecycleParticipant {
     private void processAnnouncement(DeviceAnnouncement announcement) {
         final boolean foundNewDevice = isDeviceNew(announcement);
         updateDevices(announcement);
+
+        DeviceReference ref = DeviceReference.getDeviceReference(announcement);
+        boolean four = announcement.getPeerCount() >= 4;
+        Boolean prev = fourDeck.put(ref, four);
+        if (prev == null || prev != four) {
+            if (announcement.getDeviceName().startsWith("XDJ-XZ") ||
+                    announcement.getDeviceName().startsWith("XDJ-AZ")) {
+                if (four) {
+                    logger.warn("{} at {} switched to unsupported four-player mode", announcement.getDeviceName(), announcement.getAddress());
+                } else {
+                    logger.info("{} at {} switched to two-player mode", announcement.getDeviceName(), announcement.getAddress());
+                }
+            }
+            deliverPlayerModeUpdate(ref, announcement.getPeerCount());
+        }
+
         if (foundNewDevice) {
             deliverFoundAnnouncement(announcement);
         }
@@ -302,6 +326,7 @@ public class DeviceFinder extends LifecycleParticipant {
     synchronized void flush() {
         final Set<DeviceAnnouncement> lastDevices = new HashSet<>(devices.values());
         devices.clear();
+        fourDeck.clear();
         firstDeviceTime.set(0);
 
         // Report the loss of all our devices, on the proper thread, also outside our lock.
@@ -371,6 +396,12 @@ public class DeviceFinder extends LifecycleParticipant {
      */
     private final Set<DeviceAnnouncementListener> deviceListeners =
             Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    /**
+     * Keeps track of listeners interested in player mode changes.
+     */
+    private final Set<PlayerModeListener> playerModeListeners =
+            Collections.newSetFromMap(new ConcurrentHashMap<>());
     /**
      * Adds the specified device announcement listener to receive device announcements when DJ Link devices
      * are found on or leave the network. If {@code listener} is {@code null} or already present in the list
@@ -391,6 +422,19 @@ public class DeviceFinder extends LifecycleParticipant {
     }
 
     /**
+     * Adds the specified player mode listener to receive updates when a device
+     * switches between two- and four-deck modes.
+     *
+     * @param listener the player mode listener to add
+     */
+    @API(status = API.Status.EXPERIMENTAL)
+    public void addPlayerModeListener(PlayerModeListener listener) {
+        if (listener != null) {
+            playerModeListeners.add(listener);
+        }
+    }
+
+    /**
      * Removes the specified device announcement listener so that it no longer receives device announcements when
      * DJ Link devices are found on or leave the network. If {@code listener} is {@code null} or not present
      * in the list of registered listeners, no exception is thrown and no action is performed.
@@ -404,6 +448,18 @@ public class DeviceFinder extends LifecycleParticipant {
     }
 
     /**
+     * Removes the specified player mode listener.
+     *
+     * @param listener the player mode listener to remove
+     */
+    @API(status = API.Status.EXPERIMENTAL)
+    public void removePlayerModeListener(PlayerModeListener listener) {
+        if (listener != null) {
+            playerModeListeners.remove(listener);
+        }
+    }
+
+    /**
      * Get the set of device announcement listeners that are currently registered.
      *
      * @return the currently registered device announcement listeners
@@ -412,6 +468,16 @@ public class DeviceFinder extends LifecycleParticipant {
     public Set<DeviceAnnouncementListener> getDeviceAnnouncementListeners() {
         // Make a copy so callers get an immutable snapshot of the current state.
         return Set.copyOf(deviceListeners);
+    }
+
+    /**
+     * Get the set of player mode listeners that are currently registered.
+     *
+     * @return the currently registered player mode listeners
+     */
+    @API(status = API.Status.EXPERIMENTAL)
+    public Set<PlayerModeListener> getPlayerModeListeners() {
+        return Set.copyOf(playerModeListeners);
     }
 
     /**
@@ -445,6 +511,22 @@ public class DeviceFinder extends LifecycleParticipant {
                     logger.warn("Problem delivering device lost announcement to listener", t);
                 }
             });
+        }
+    }
+
+    /**
+     * Send a player mode update to all registered listeners.
+     */
+    private void deliverPlayerModeUpdate(DeviceReference device, int peers) {
+        if (!getPlayerModeListeners().isEmpty()) {
+            PlayerModeUpdate update = new PlayerModeUpdate(device, peers);
+            for (final PlayerModeListener listener : getPlayerModeListeners()) {
+                try {
+                    listener.playerModeChanged(update);
+                } catch (Throwable t) {
+                    logger.warn("Problem delivering player mode update to listener", t);
+                }
+            }
         }
     }
 
